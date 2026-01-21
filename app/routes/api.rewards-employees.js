@@ -121,8 +121,10 @@ export async function action({ request }) {
   /* =========================
      SECURITY CHECK
      ========================= */
-  const body = await request.json();
 
+  const body = await request.json();
+console.log("ENV FLOW_SECRET:", process.env.FLOW_SECRET);
+console.log("BODY secret:", body?.secret);
   if (body?.secret !== FLOW_SECRET) {
     console.log("❌ Unauthorized Flow request");
     return new Response("Unauthorized", { status: 401 });
