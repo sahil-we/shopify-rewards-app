@@ -8,7 +8,6 @@ import {
   InlineStack,
   BlockStack,
   Text,
-  Divider,
 } from "@shopify/polaris";
 import { useState } from "react";
 
@@ -17,9 +16,14 @@ export default function RewardsEmployees() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [rawResponse, setRawResponse] = useState(null);
+  const [error, setError] = useState(null);
 
+  /* ========================================================
+     FETCH EMPLOYEES
+  ======================================================== */
   async function fetchEmployees() {
     setLoading(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/rewards-employees", {
@@ -27,41 +31,44 @@ export default function RewardsEmployees() {
       });
 
       const text = await res.text();
-      if (!text) {
-        setRawResponse("EMPTY RESPONSE");
-        return;
-      }
+      if (!text) throw new Error("Empty API response");
 
       const json = JSON.parse(text);
+
+      // Validate backend contract
+      if (!Array.isArray(json?.allEmployees)) {
+        throw new Error("allEmployees array missing in response");
+      }
+
       setRawResponse(json);
-
-      /* ===============================
-         🔥 CLEAN EXTRACTION
-      =============================== */
-      const list = Array.isArray(json?.allEmployees?.data)
-        ? json.allEmployees.data
-        : [];
-
-      const single = json?.employeeById ?? null;
-
-      setEmployees(list);
-      setSelectedEmployee(single);
+      setEmployees(json.allEmployees);
+      setSelectedEmployee(json.selectedEmployee ?? null);
     } catch (err) {
-      console.error("🔥 Fetch failed:", err);
+      console.error("Fetch failed:", err);
+      setError(err.message);
+      setEmployees([]);
+      setSelectedEmployee(null);
     } finally {
       setLoading(false);
     }
   }
 
+  /* ========================================================
+     HELPERS
+  ======================================================== */
   const badge = (value) => (
     <Badge tone={value ? "success" : "critical"}>
       {value ? "Active" : "Inactive"}
     </Badge>
   );
 
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString() : "—");
+  const formatDate = (d) =>
+    d ? new Date(d).toLocaleDateString() : "—";
 
-  const rows = employees.map((e) => [
+  /* ========================================================
+     TABLE 1: ALL EMPLOYEES
+  ======================================================== */
+  const employeeRows = employees.map((e) => [
     e.employeeID ?? "—",
     e.employeeNumber ?? "—",
     `${e.firstName ?? ""} ${e.lastName ?? ""}`,
@@ -73,9 +80,40 @@ export default function RewardsEmployees() {
     e.workerType ?? "—",
   ]);
 
+  /* ========================================================
+     TABLE 2: SELECTED EMPLOYEE DETAILS
+  ======================================================== */
+  const selectedEmployeeRows = selectedEmployee
+    ? [
+        ["Employee ID", selectedEmployee.employeeID ?? "—"],
+        ["Employee Number", selectedEmployee.employeeNumber ?? "—"],
+        [
+          "Name",
+          `${selectedEmployee.firstName ?? ""} ${
+            selectedEmployee.lastName ?? ""
+          }`,
+        ],
+        ["Email", selectedEmployee.emailAddress ?? "—"],
+        ["Position", selectedEmployee.position ?? "—"],
+        ["Office Location", selectedEmployee.officeLocation ?? "—"],
+        ["Status", badge(selectedEmployee.isActive)],
+        ["Provider Status", selectedEmployee.providerStatus ?? "—"],
+        ["Company ID", selectedEmployee.companyID ?? "—"],
+        ["Worker Type", selectedEmployee.workerType || "—"],
+        ["Hire Date", formatDate(selectedEmployee.hireDate)],
+        ["Termination Date", formatDate(selectedEmployee.terminationDate)],
+        ["Created Date", formatDate(selectedEmployee.createdDate)],
+        ["Updated Date", formatDate(selectedEmployee.updatedDate)],
+        ["Is Rescind", selectedEmployee.isRescind ? "Yes" : "No"],
+      ]
+    : [];
+
+  /* ========================================================
+     UI
+  ======================================================== */
   return (
     <Page
-      title="Employees Dashboard"
+      title="Employees"
       primaryAction={{
         content: "Fetch Employees",
         onAction: fetchEmployees,
@@ -83,95 +121,96 @@ export default function RewardsEmployees() {
       }}
     >
       <Layout>
-
-        {/* ===============================
-            👤 EMPLOYEE BY ID CARD
-        =============================== */}
-        {selectedEmployee && (
-          <Layout.Section>
-            <Card title="Employee By ID">
-              <BlockStack gap="200">
-                <Text>
-                  <b>ID:</b> {selectedEmployee.employeeID}
-                </Text>
-                <Text>
-                  <b>Name:</b>{" "}
-                  {selectedEmployee.firstName} {selectedEmployee.lastName}
-                </Text>
-                <Text>
-                  <b>Employee No:</b> {selectedEmployee.employeeNumber}
-                </Text>
-                <Text>
-                  <b>Email:</b> {selectedEmployee.emailAddress ?? "—"}
-                </Text>
-                <Text>
-                  <b>Status:</b> {badge(selectedEmployee.isActive)}
-                </Text>
-                <Text>
-                  <b>Hire Date:</b>{" "}
-                  {formatDate(selectedEmployee.hireDate)}
-                </Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        )}
-
-        <Divider />
-
-        {/* ===============================
-            📋 ALL EMPLOYEES TABLE
-        =============================== */}
         <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              {loading && (
+          <BlockStack gap="400">
+            {/* ================= Loading ================= */}
+            {loading && (
+              <Card>
                 <InlineStack gap="300">
                   <Spinner />
-                  <Text>Loading…</Text>
+                  <Text>Loading employees…</Text>
                 </InlineStack>
-              )}
+              </Card>
+            )}
 
-              {!loading && employees.length === 0 && (
-                <>
-                  <Text tone="critical">❌ No employees rendered</Text>
-                  <Text as="pre">
-                    {JSON.stringify(rawResponse, null, 2)}
+            {/* ================= Error ================= */}
+            {!loading && error && (
+              <Card>
+                <BlockStack gap="200">
+                  <Text tone="critical">❌ {error}</Text>
+                  {rawResponse && (
+                    <Text as="pre">
+                      {JSON.stringify(rawResponse, null, 2)}
+                    </Text>
+                  )}
+                </BlockStack>
+              </Card>
+            )}
+
+            {/* ================= Empty State ================= */}
+            {!loading && !error && employees.length === 0 && (
+              <Card>
+                <Text tone="subdued">
+                  No employees loaded yet. Click “Fetch Employees”.
+                </Text>
+              </Card>
+            )}
+
+            {/* ================= Table 1: All Employees ================= */}
+            {employees.length > 0 && (
+              <Card>
+                <BlockStack gap="300">
+                  <Text variant="headingMd">All Employees</Text>
+
+                  <DataTable
+                    columnContentTypes={[
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                      "text",
+                    ]}
+                    headings={[
+                      "ID",
+                      "Emp No",
+                      "Name",
+                      "Email",
+                      "Position",
+                      "Office",
+                      "Status",
+                      "Hire Date",
+                      "Worker Type",
+                    ]}
+                    rows={employeeRows}
+                  />
+                </BlockStack>
+              </Card>
+            )}
+
+            {/* ================= Table 2: Selected Employee ================= */}
+            {selectedEmployee && (
+              <Card>
+                <BlockStack gap="300">
+                  <Text variant="headingMd">
+                    Selected Employee Details
                   </Text>
-                </>
-              )}
 
-              {employees.length > 0 && (
-                <DataTable
-                  columnContentTypes={[
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                  ]}
-                  headings={[
-                    "ID",
-                    "Emp No",
-                    "Name",
-                    "Email",
-                    "Position",
-                    "Office",
-                    "Status",
-                    "Hire Date",
-                    "Worker Type",
-                  ]}
-                  rows={rows}
-                />
-              )}
-            </BlockStack>
-          </Card>
+                  <DataTable
+                    columnContentTypes={["text", "text"]}
+                    headings={["Field", "Value"]}
+                    rows={selectedEmployeeRows}
+                  />
+                </BlockStack>
+              </Card>
+            )}
+          </BlockStack>
         </Layout.Section>
-
       </Layout>
     </Page>
   );
 }
+
