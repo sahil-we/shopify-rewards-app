@@ -14,9 +14,7 @@ export async function action({ request }) {
   console.log("🔵 App Proxy hit");
 
   try {
-    /* ----------------------------------------------
-       VERIFY APP PROXY REQUEST
-    ---------------------------------------------- */
+
     const { admin } = await authenticate.public.appProxy(request);
 
     /* ----------------------------------------------

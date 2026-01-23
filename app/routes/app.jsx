@@ -28,6 +28,8 @@ export default function App() {
       <PolarisAppProvider i18n={en}>
         <s-app-nav>
           <a href="/app/rewards">Employees Data</a>
+          <a href="/app/redeem">Redeem points</a>
+        
         </s-app-nav>
         <Outlet />
       </PolarisAppProvider>

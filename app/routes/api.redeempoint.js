@@ -3,58 +3,65 @@ export async function loader() {
 }
 
 export async function action({ request }) {
-  console.log("🚀 Shopify Flow triggered redeem API");
+  console.log("🚀 Redeem API triggered");
 
   try {
     const body = await request.json();
-    console.log("📦 Flow payload received:", body);
-
-    const { orderId, employeeId, points } = body;
-
-    if (!orderId || !employeeId || !points) {
-      throw new Error("Missing required Flow data");
-    }
+    console.log("📦 Request body:", body);
 
     const BASE_URL = "https://stg-rewardsapi.centerforautism.com";
     const USERNAME = "admin";
     const PASSWORD = "admin";
 
     /* ================= LOGIN ================= */
-    console.log("🔐 Logging into Rewards API");
+    console.log("🔐 Logging in to Rewards API");
 
     const loginRes = await fetch(`${BASE_URL}/Authentication/Login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         Username: USERNAME,
         Password: PASSWORD,
       }),
     });
 
+    console.log("📡 Login status:", loginRes.status);
+
     const loginText = await loginRes.text();
     console.log("📨 Login raw response:", loginText);
 
-    let loginData = JSON.parse(loginText);
+    let loginData;
+    try {
+      loginData = JSON.parse(loginText);
+    } catch (e) {
+      console.error("❌ Login response is not JSON");
+      throw new Error("Invalid login response");
+    }
+
+    console.log("✅ Parsed login data:", loginData);
 
     const token =
       loginData.Token ||
       loginData.AccessToken ||
       loginData.access_token ||
-      loginData?.data?.Token;
+      loginData.token;
 
     if (!token) {
+      console.error("❌ Token not found in login response");
       throw new Error("Login failed: token missing");
     }
 
-    console.log("🔑 Token received");
+    console.log("🔑 Token received:", token);
 
     /* ================= REDEEM ================= */
     const redeemUrl =
       `${BASE_URL}/CardShopWrapper/SaveEmployeeOrderExternal` +
-      `?EmployeeID=${employeeId}` +
-      `&PointRedeemed=${points}` +
+      `?EmployeeID=${body.employeeId}` +
+      `&PointRedeemed=${body.points}` +
       `&Notes=Shopify Order` +
-      `&ExternalReferenceID=Order-${orderId}`;
+      `&ExternalReferenceID=${body.orderId}`;
 
     console.log("➡️ Redeem URL:", redeemUrl);
 
@@ -65,10 +72,13 @@ export async function action({ request }) {
       },
     });
 
+    console.log("📡 Redeem status:", redeemRes.status);
+
     const redeemText = await redeemRes.text();
-    console.log("📨 Redeem response:", redeemText);
+    console.log("📨 Redeem raw response:", redeemText);
 
     if (!redeemRes.ok) {
+      console.error("❌ Redeem API failed");
       throw new Error(redeemText);
     }
 
@@ -77,19 +87,17 @@ export async function action({ request }) {
     return new Response(
       JSON.stringify({
         success: true,
-        orderId,
-        employeeId,
-        points,
+        message: "Points redeemed successfully",
       }),
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("🔥 Flow redeem error:", error.message);
+    console.error("🔥 API Error:", error.message);
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        message: error.message,
       }),
       { status: 500 }
     );
