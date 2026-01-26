@@ -26,7 +26,7 @@ export default function RewardsEmployees() {
     setError(null);
 
     try {
-      const res = await fetch("/api/rewards-employees", {
+      const res = await fetch("/api/employe_data", {
         method: "POST",
       });
 
