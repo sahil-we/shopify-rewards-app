@@ -55,8 +55,18 @@ export async function action({ request }) {
     const pointsData = await pointsRes.json();
 
     console.log("✅ Employee Points Result:", pointsData);
+    
+        const {
+      employeeID,
+      employeeName,
+      availablePoints,
+      totalEarnedPoints,
+      redeemedPoints,
+      addedPoints,
+    } = pointsData;
 
-    const coins = pointsData.availablePoints || 0;
+    const coins = availablePoints || 0;
+
 
     /* ----------------------------------------------
        FETCH SHOPIFY CUSTOMER ID BY EMAIL
@@ -222,12 +232,21 @@ export async function action({ request }) {
        FINAL RESPONSE
     ---------------------------------------------- */
     return Response.json({
-      success: true,
-      employee: pointsData,
-      email,
-      coins,
-      discountCode,
-    });
+  success: true,
+
+  employeeID,
+  employeeName,
+
+  availablePoints,
+  totalEarnedPoints,
+  redeemedPoints,
+  addedPoints,
+
+  email,
+  coins,
+  discountCode,
+});
+
 
   } catch (error) {
     console.error("❌ Proxy Error:", error);
