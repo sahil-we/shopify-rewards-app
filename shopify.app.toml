@@ -26,12 +26,7 @@ scopes = "read_customers, write_customers, write_discounts, read_discounts"
 [auth]
 redirect_urls = [ "https://shopify-rewards-app-production.up.railway.app/api/auth" ]
 
-[[app_proxies]]
+[app_proxy]
 url = "/api/proxy"
 prefix = "apps"
 subpath = "rewards"
-
-[[app_proxies]]
-url = "/api/points"
-prefix = "apps"
-subpath = "points"

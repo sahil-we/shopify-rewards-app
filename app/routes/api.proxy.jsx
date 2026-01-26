@@ -55,6 +55,28 @@ export async function action({ request }) {
     const pointsData = await pointsRes.json();
 
     console.log("✅ Employee Points Result:", pointsData);
+    /* ----------------------------------------------
+   FETCH DEFAULT EMPLOYEE (ID = 1) POINTS
+---------------------------------------------- */
+const defaultEmployeeRes = await fetch(
+  `${BASE_URL}/CardShopWrapper/GetEmployeePoints?EmployeeID=1`,
+  {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  }
+);
+
+if (!defaultEmployeeRes.ok) {
+  throw new Error("Default employee points API failed");
+}
+
+const defaultEmployeePoints = await defaultEmployeeRes.json();
+
+console.log(
+  "📊 Default Employee (ID=1) Points:",
+  defaultEmployeePoints
+);
+
     
         const {
       employeeID,
@@ -245,6 +267,7 @@ export async function action({ request }) {
   email,
   coins,
   discountCode,
+   defaultEmployeePoints,
 });
 
 
