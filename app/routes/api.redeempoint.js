@@ -8,7 +8,7 @@ export async function loader({ request }) {
     const raw = request.headers.get("points"); // "90.090.0"
     const rawOrderId = request.headers.get("ordername");
     const rawOrder_Id = request.headers.get("orderId");
-    console.log(rawOrderId);
+    console.log(rawOrder_Id);
     const employeeId = request.headers.get("employeeId");
 
     if (!raw || !rawOrderId || !employeeId) {
