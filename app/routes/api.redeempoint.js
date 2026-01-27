@@ -2,7 +2,9 @@ export async function loader({ request }) {
   console.log("🚀 Shopify Flow Redeem Triggered");
 
   try {
-    const orderId = request.headers.get("orderId");
+    const rawOrderId = request.headers.get("orderId");
+const orderId = rawOrderId.replace("#", "").trim();
+
     const employeeId = request.headers.get("employeeId");
     const pointsRaw = request.headers.get("points");
 
