@@ -1,4 +1,5 @@
 import { authenticate } from "../shopify.server";
+import { prisma } from "../db.server"; // Make sure this path points to your Prisma instance
 
 /* ======================================================
    HARD-CODED REWARDS API CONFIG (NO ENV)
@@ -14,7 +15,6 @@ export async function action({ request }) {
   console.log("🔵 App Proxy hit");
 
   try {
-
     const { admin } = await authenticate.public.appProxy(request);
 
     /* ----------------------------------------------
@@ -55,30 +55,30 @@ export async function action({ request }) {
     const pointsData = await pointsRes.json();
 
     console.log("✅ Employee Points Result:", pointsData);
+
     /* ----------------------------------------------
-   FETCH DEFAULT EMPLOYEE (ID = 1) POINTS
----------------------------------------------- */
-const defaultEmployeeRes = await fetch(
-  `${BASE_URL}/CardShopWrapper/GetEmployeeAddedPointsById?EmployeeID=18237`,
-  {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  }
-);
+       FETCH DEFAULT EMPLOYEE (ID = 18237) POINTS
+    ---------------------------------------------- */
+    const defaultEmployeeRes = await fetch(
+      `${BASE_URL}/CardShopWrapper/GetEmployeeAddedPointsById?EmployeeID=18237`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
-if (!defaultEmployeeRes.ok) {
-  throw new Error("Default employee points API failed");
-}
+    if (!defaultEmployeeRes.ok) {
+      throw new Error("Default employee points API failed");
+    }
 
-const defaultEmployeePoints = await defaultEmployeeRes.json();
+    const defaultEmployeePoints = await defaultEmployeeRes.json();
 
-console.log(
-  "📊 Default Employee (ID=1) Points:",
-  defaultEmployeePoints
-);
+    console.log(
+      "📊 Default Employee (ID=18237) Points:",
+      defaultEmployeePoints
+    );
 
-    
-        const {
+    const {
       employeeID,
       employeeName,
       availablePoints,
@@ -87,8 +87,24 @@ console.log(
       addedPoints,
     } = pointsData;
 
-    const coins = availablePoints || 0;
+    /* ----------------------------------------------
+       FETCH ACTIVE REWARD RULE FROM DB
+    ---------------------------------------------- */
+    const rewardRule = await prisma.rewardRule.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
 
+    if (!rewardRule) {
+      throw new Error("No active reward rule found");
+    }
+
+    const { pointsPerUnit, currencyUnit } = rewardRule;
+
+    // Calculate coins / discount amount based on reward rule
+    const coins = ((availablePoints || 0) * currencyUnit) / pointsPerUnit;
+
+    console.log(`💰 Discount amount calculated from reward rule: $${coins}`);
 
     /* ----------------------------------------------
        FETCH SHOPIFY CUSTOMER ID BY EMAIL
@@ -254,23 +270,21 @@ console.log(
        FINAL RESPONSE
     ---------------------------------------------- */
     return Response.json({
-  success: true,
+      success: true,
 
-  employeeID,
-  employeeName,
+      employeeID,
+      employeeName,
 
-  availablePoints,
-  totalEarnedPoints,
-  redeemedPoints,
-  addedPoints,
+      availablePoints,
+      totalEarnedPoints,
+      redeemedPoints,
+      addedPoints,
 
-  email,
-  coins,
-  discountCode,
-   defaultEmployeePoints,
-});
-
-
+      email,
+      coins,
+      discountCode,
+      defaultEmployeePoints,
+    });
   } catch (error) {
     console.error("❌ Proxy Error:", error);
 

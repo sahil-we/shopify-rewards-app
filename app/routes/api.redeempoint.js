@@ -125,6 +125,35 @@ export async function loader({ request }) {
       throw new Error(redeemText);
     }
 
+    /* ================= UPDATE METAFIELD ================= */
+
+    const SHOPIFY_API = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2026-01/orders/${orderId}/metafields.json`;
+
+    const metafieldBody = {
+      metafield: {
+        namespace: "custom",
+        key: "redeem_point",
+        type: "multi_line_text_field",
+        value: pointsToRedeem.toString(),
+      },
+    };
+
+    const metafieldRes = await fetch(SHOPIFY_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": process.env.SHOPIFY_ADMIN_API_TOKEN,
+      },
+      body: JSON.stringify(metafieldBody),
+    });
+
+    const metafieldData = await metafieldRes.json();
+    console.log("📝 Metafield updated:", metafieldData);
+
+    if (!metafieldRes.ok) {
+      throw new Error("Failed to update order metafield");
+    }
+
     /* ================= SUCCESS ================= */
 
     return new Response(
