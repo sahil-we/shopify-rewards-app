@@ -60,7 +60,7 @@ export async function action({ request }) {
        FETCH DEFAULT EMPLOYEE (ID = 18237) POINTS
     ---------------------------------------------- */
     const defaultEmployeeRes = await fetch(
-      `${BASE_URL}/CardShopWrapper/GetEmployeeAddedPointsById?EmployeeID=18237`,
+      `${BASE_URL}/CardShopWrapper/GetEmployeeAddedPointsById?EmployeeID=${employeeId}`,
       {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
